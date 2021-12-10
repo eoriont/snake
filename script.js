@@ -2,6 +2,11 @@ const gridWidth = 20;
 const gridHeight = 20;
 var grid;
 var squareWidth, squareHeight;
+var snake;
+var snakeDir;
+var apples;
+var hasTurned;
+var nextMove;
 
 function setup() {
     createCanvas(500, 500);
@@ -9,24 +14,21 @@ function setup() {
     squareWidth = width / gridWidth;
     squareHeight = height / gridHeight;
 
-    // snake = [{ x: gridWidth / 2, y: gridHeight / 2 }];
-    snake = []
-    for (let i = 0; i < 10; i++) {
-        snake.push({ x: gridWidth / 2, y: gridHeight / 2 });
-    }
+    snake = [{ x: gridWidth / 2, y: gridHeight / 2 }];
     snakeDir = { x: 1, y: 0 };
-
     apples = [];
+
+    hasTurned = false;
+    nextMove = null;
+
     generateApple();
     generateApple();
 }
 
-var snake;
-var snakeDir;
-var apples;
 
 function draw() {
-    if (frameCount % 10 == 0) {
+    let advance = frameCount % (10 - Math.floor(snake.length * 1 / 10)) == 0;
+    if (advance) {
         render();
         tick();
     }
@@ -48,11 +50,16 @@ function tick() {
     if (snake.length > 1) {
         snake.pop();
     }
+    if (!hasTurned && nextMove) {
+        makeMove(nextMove);
+        nextMove = null;
+    }
     let newPos = { x: snake[0].x + snakeDir.x, y: snake[0].y + snakeDir.y }
-    if (contains(snake, newPos)) {
+    if (newPos.x < 0 || newPos.x > gridWidth || newPos.y < 0 || newPos.y > gridHeight || contains(snake, newPos)) {
         gameOver();
     }
     snake.splice(0, 0, newPos);
+    hasTurned = false;
 
 
     let toRemove = [];
@@ -86,14 +93,14 @@ function render() {
 }
 
 function keyPressed() {
-    if (keyCode == 37 && snakeDir.x == 0) {
-        snakeDir = { x: -1, y: 0 };
-    } else if (keyCode == 39 && snakeDir.x == 0) {
-        snakeDir = { x: 1, y: 0 };
-    } else if (keyCode == 38 && snakeDir.y == 0) {
-        snakeDir = { x: 0, y: -1 };
-    } else if (keyCode == 40 && snakeDir.y == 0) {
-        snakeDir = { x: 0, y: 1 };
+    if (keyCode == 37) {
+        makeMove("L");
+    } else if (keyCode == 39) {
+        makeMove("R");
+    } else if (keyCode == 38) {
+        makeMove("U");
+    } else if (keyCode == 40) {
+        makeMove("D");
     }
 }
 
@@ -119,4 +126,38 @@ function contains(list, pos) {
         }
     }
     return false;
+}
+
+
+function makeMove(dir) {
+    if (!hasTurned) {
+        if (dir == "R" && snakeDir.x == 0) {
+            hasTurned = true;
+            snakeDir = { x: 1, y: 0 };
+        } else if (dir == "L" && snakeDir.x == 0) {
+            hasTurned = true;
+            snakeDir = { x: -1, y: 0 };
+        } else if (dir == "U" && snakeDir.y == 0) {
+            hasTurned = true;
+            snakeDir = { x: 0, y: -1 };
+        } else if (dir == "D" && snakeDir.y == 0) {
+            hasTurned = true;
+            snakeDir = { x: 0, y: 1 };
+        }
+    } else {
+        nextMove = dir;
+    }
+}
+
+function getInputs() {
+    return {
+        appleX: apples[0].x - snake[0].x,
+        appleY: apples[0].y - snake[0].y,
+        dirX: snakeDir.x,
+        dirY: snakeDir.y,
+        collideU: contains(snake, { x: snake[0].x, y: snake[0].y - 1 }),
+        collideD: contains(snake, { x: snake[0].x, y: snake[0].y + 1 }),
+        collideL: contains(snake, { x: snake[0].x - 1, y: snake[0].y }),
+        collideR: contains(snake, { x: snake[0].x + 1, y: snake[0].y }),
+    }
 }
